@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>医美咨询线索分层 Demo</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",Arial,sans-serif;background:#f6f7fb;color:#1f2937}
+.wrap{max-width:1150px;margin:auto;padding:26px 18px 48px}
+header{background:linear-gradient(135deg,#6d28d9,#ec4899);color:#fff;border-radius:22px;padding:26px;margin-bottom:18px;box-shadow:0 16px 40px rgba(109,40,217,.2)}
+h1{margin:0 0 8px;font-size:30px}p{line-height:1.7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px;box-shadow:0 10px 30px rgba(15,23,42,.06)}
+h2{margin:0 0 14px;font-size:19px}textarea,input{width:100%;border:1px solid #e5e7eb;border-radius:12px;padding:12px;font-size:15px;box-sizing:border-box}
+textarea{height:235px;line-height:1.7}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+button{border:0;background:#8b5cf6;color:white;padding:11px 15px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin:12px 8px 0 0}
+button.secondary{background:#111827}button.ghost{background:#eef2ff;color:#4338ca}
+.result{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item{background:#f3f4f6;border-radius:14px;padding:13px;border:1px solid #eceff3;min-height:70px}
+.item b{display:block;margin-bottom:6px}.full{grid-column:1/-1}.badge{padding:6px 10px;border-radius:99px;color:white;font-weight:700}.high{background:#dc2626}.mid{background:#d97706}.low{background:#2563eb}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top}th{background:#fafafa}
+.warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:14px;margin-top:14px;font-size:14px;line-height:1.6}
+@media(max-width:850px){.grid,.result,.row{grid-template-columns:1fr}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>医美咨询线索分层 Demo</h1><p>演示：把客户咨询内容整理成“项目、城市、预算、时间、顾虑、意向等级、销售跟进建议”，辅助客服承接和私域跟进。</p></header>
+<div class="grid">
+<section class="card">
+<h2>1. 输入客户咨询内容</h2>
+<textarea id="inputText"></textarea>
+<div class="row"><input id="source" value="抖音投流" placeholder="线索来源"><input id="sales" value="待分配" placeholder="负责人"></div>
+<button onclick="analyzeLead()">分析线索</button><button class="ghost" onclick="loadSample()">载入示例</button><button class="secondary" onclick="clearAll()">清空</button>
+<div class="warn">合规提示：本 Demo 只做咨询信息整理、意向判断和跟进辅助，不做诊断、不承诺疗效、不替医生给医疗建议。</div>
+</section>
+<section class="card">
+<h2>2. 分析结果</h2>
+<div class="result">
+<div class="item"><b>咨询项目</b><span id="project">-</span></div><div class="item"><b>城市</b><span id="city">-</span></div>
+<div class="item"><b>预算</b><span id="budget">-</span></div><div class="item"><b>时间</b><span id="time">-</span></div>
+<div class="item"><b>主要顾虑</b><span id="concern">-</span></div><div class="item"><b>意向等级</b><span id="level">-</span></div>
+<div class="item full"><b>销售跟进建议</b><span id="suggestion">-</span></div><div class="item full"><b>建议标签</b><span id="tags">-</span></div>
+</div>
+<button onclick="addToTable()">加入线索表</button><button class="ghost" onclick="copyResult()">复制结果</button>
+</section></div>
+<section class="card" style="margin-top:18px"><h2>3. 线索沉淀表</h2>
+<table id="leadTable"><thead><tr><th>时间</th><th>来源</th><th>项目</th><th>城市</th><th>预算</th><th>意向</th><th>负责人</th><th>跟进建议</th></tr></thead><tbody></tbody></table>
+<button class="ghost" onclick="exportCSV()">导出 CSV</button>
+<p style="color:#6b7280;font-size:13px">下一版可接入：飞书多维表格 / 企业微信提醒 / Coze智能体 / CRM字段 / API 或 Webhook。</p>
+</section>
+</div>
+<script>
+const kw={project:["拉皮","鼻修复","隆鼻","双眼皮","眼综合","脂肪填充","面吸","轮廓","丰胸","抗衰","祛斑","热玛吉","超声炮"],cities:["成都","重庆","贵阳","北京","上海","广州","深圳","杭州","武汉","西安","昆明","长沙","南京","苏州","海外","美国","加拿大","日本","德国"],concerns:["安全","风险","恢复","恢复期","疼","痛","价格","费用","失败","效果","自然","留疤","医生","案例","手术","住院","多久"]};
+let current=null;
+function first(t,a){return a.find(x=>t.includes(x))||""}
+function budget(t){let m=t.match(/(\d+(\.\d+)?)\s*(万|w|W)/);if(m)return m[1]+"万左右";let m2=t.match(/预算[^，。；\n]{0,12}/);if(m2)return m2[0];if(t.includes("便宜")||t.includes("贵"))return"价格敏感";return"未明确"}
+function time(t){let arr=["最近一个月","今天","明天","这周","本周","月底","下个月","一个月","春节","暑假","国庆","年后","年前"];return first(t,arr)||"未明确"}
+function concern(t){const items=[];if(t.includes("安全"))items.push("手术安全");if(t.includes("恢复期"))items.push("恢复周期");if(t.includes("案例"))items.push("真实案例");if(t.includes("疼痛"))items.push("疼痛感受");if(t.includes("效果"))items.push("术后效果");if(t.includes("风险"))items.push("手术风险");if(t.includes("疤痕"))items.push("疤痕问题");return items.length?"关注"+items.join("、"):"客户暂未说明"}
+function score(t,b,ti,p){let s=0;if(p!="未明确")s+=25;if(b!="未明确")s+=25;if(ti!="未明确")s+=20;if(t.includes("预约")||t.includes("到院")||t.includes("面诊")||t.includes("什么时候可以做"))s+=30;if(t.includes("随便问问")||t.includes("了解一下"))s-=10;if(s>=65)return{name:"高意向",cls:"high",score:s};if(s>=35)return{name:"中意向",cls:"mid",score:s};return{name:"低意向",cls:"low",score:s}}
+function analyzeLead(){let t=document.getElementById("inputText").value.trim();if(!t){alert("先输入客户咨询内容");return}let p=first(t,kw.project)||"未明确",c=first(t,kw.cities)||"未明确",b=budget(t),ti=time(t),co=concern(t),lv=score(t,b,ti,p);let sug=lv.name=="高意向"?`优先分配资深销售，先确认${p}诉求、预算和可到院时间，发送案例/医生/安全保障信息，引导预约面诊。`:lv.name=="中意向"?"先补充项目科普、恢复期和案例信息，询问预算与时间，持续跟进并打消核心顾虑。":"先做基础科普和需求确认，不急于强转化，进入长期培育池。";let tags=[p,c,b,ti,co,lv.name].filter(x=>x&&x!="未明确").join(" / ")||"待补充";current={p,c,b,ti,co,lv,sug,tags};document.getElementById("project").innerText=p;document.getElementById("city").innerText=c;document.getElementById("budget").innerText=b;document.getElementById("time").innerText=ti;document.getElementById("concern").innerText=co;document.getElementById("level").innerHTML=`<span class="badge ${lv.cls}">${lv.name} · ${lv.score}分</span>`;document.getElementById("suggestion").innerText=sug;document.getElementById("tags").innerText=tags}
+function addToTable(){if(!current){alert("请先分析线索");return}let tr=document.createElement("tr");tr.innerHTML=`<td>${new Date().toLocaleString()}</td><td>${source.value||"-"}</td><td>${current.p}</td><td>${current.c}</td><td>${current.b}</td><td>${current.lv.name}</td><td>${sales.value||"待分配"}</td><td>${current.sug}</td>`;document.querySelector("#leadTable tbody").prepend(tr)}
+function copyResult(){if(!current){alert("请先分析线索");return}navigator.clipboard.writeText(`项目：${current.p}\n城市：${current.c}\n预算：${current.b}\n时间：${current.ti}\n顾虑：${current.co}\n意向：${current.lv.name}\n标签：${current.tags}\n跟进建议：${current.sug}`).then(()=>alert("已复制"))}
+function exportCSV(){let rows=[["时间","来源","项目","城市","预算","意向","负责人","跟进建议"]];document.querySelectorAll("#leadTable tbody tr").forEach(tr=>rows.push([...tr.children].map(td=>td.innerText.replace(/\n/g," "))));let csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="医美线索分层表.csv";a.click()}
+function loadSample(){inputText.value="你好，我在重庆，想了解拉皮，预算大概5万左右，最近一个月可以安排。主要担心恢复期、安全问题，还有想看看真实案例。";source.value="抖音投流";sales.value="待分配"}
+function clearAll(){inputText.value="";current=null;["project","city","budget","time","concern","level","suggestion","tags"].forEach(id=>document.getElementById(id).innerText="-")}
+loadSample();
+</script></body></html>
