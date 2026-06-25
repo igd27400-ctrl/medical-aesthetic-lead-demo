@@ -9,13 +9,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft
 header{background:linear-gradient(135deg,#6d28d9,#ec4899);color:#fff;border-radius:22px;padding:26px;margin-bottom:18px;box-shadow:0 16px 40px rgba(109,40,217,.2)}
 h1{margin:0 0 8px;font-size:30px}p{line-height:1.7}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px;box-shadow:0 10px 30px rgba(15,23,42,.06)}
-h2{margin:0 0 14px;font-size:19px}textarea,input{width:100%;border:1px solid #e5e7eb;border-radius:12px;padding:12px;font-size:15px;box-sizing:border-box}
+h2{margin:0 0 14px;font-size:19px}textarea,input,select{width:100%;border:1px solid #e5e7eb;border-radius:12px;padding:12px;font-size:15px;box-sizing:border-box;background:#fff}
 textarea{height:235px;line-height:1.7}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 button{border:0;background:#8b5cf6;color:white;padding:11px 15px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin:12px 8px 0 0}
 button.secondary{background:#111827}button.ghost{background:#eef2ff;color:#4338ca}
 .result{display:grid;grid-template-columns:1fr 1fr;gap:12px}.item{background:#f3f4f6;border-radius:14px;padding:13px;border:1px solid #eceff3;min-height:70px}
 .item b{display:block;margin-bottom:6px}.full{grid-column:1/-1}.badge{padding:6px 10px;border-radius:99px;color:white;font-weight:700}.high{background:#dc2626}.mid{background:#d97706}.low{background:#2563eb}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top}th{background:#fafafa}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:1180px}.table-wrap{overflow-x:auto}.status-select{min-width:110px;padding:7px 9px;border-radius:9px}.note-input{min-width:180px;padding:8px 9px;border-radius:9px}th,td{border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top}th{background:#fafafa}
 .warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:14px;margin-top:14px;font-size:14px;line-height:1.6}
 @media(max-width:850px){.grid,.result,.row{grid-template-columns:1fr}h1{font-size:24px}}
 </style>
@@ -42,8 +42,8 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px
 <button onclick="addToTable()">加入线索表</button><button class="ghost" onclick="copyResult()">复制结果</button>
 </section></div>
 <section class="card" style="margin-top:18px"><h2>3. 线索沉淀表</h2>
-<table id="leadTable"><thead><tr><th>时间</th><th>来源</th><th>项目</th><th>城市</th><th>预算</th><th>意向</th><th>负责人</th><th>跟进建议</th></tr></thead><tbody></tbody></table>
-<button class="ghost" onclick="exportCSV()">导出 CSV</button>
+<div class="table-wrap"><table id="leadTable"><thead><tr><th>时间</th><th>来源</th><th>项目</th><th>城市</th><th>预算</th><th>意向</th><th>负责人</th><th>跟进状态</th><th>备注</th><th>跟进建议</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+<button class="ghost" onclick="exportCSV()">导出 CSV</button><button class="secondary" onclick="clearSavedLeads()">清空线索</button>
 <p style="color:#6b7280;font-size:13px">下一版可接入：飞书多维表格 / 企业微信提醒 / Coze智能体 / CRM字段 / API 或 Webhook。</p>
 </section>
 </div>
@@ -56,10 +56,20 @@ function time(t){let arr=["最近一个月","今天","明天","这周","本周",
 function concern(t){const items=[];if(t.includes("安全"))items.push("手术安全");if(t.includes("恢复期"))items.push("恢复周期");if(t.includes("案例"))items.push("真实案例");if(t.includes("疼痛"))items.push("疼痛感受");if(t.includes("效果"))items.push("术后效果");if(t.includes("风险"))items.push("手术风险");if(t.includes("疤痕"))items.push("疤痕问题");return items.length?"关注"+items.join("、"):"客户暂未说明"}
 function score(t,b,ti,p){let s=0;if(p!="未明确")s+=25;if(b!="未明确")s+=25;if(ti!="未明确")s+=20;if(t.includes("预约")||t.includes("到院")||t.includes("面诊")||t.includes("什么时候可以做"))s+=30;if(t.includes("随便问问")||t.includes("了解一下"))s-=10;if(s>=65)return{name:"高意向",cls:"high",score:s};if(s>=35)return{name:"中意向",cls:"mid",score:s};return{name:"低意向",cls:"low",score:s}}
 function analyzeLead(){let t=document.getElementById("inputText").value.trim();if(!t){alert("先输入客户咨询内容");return}let p=first(t,kw.project)||"未明确",c=first(t,kw.cities)||"未明确",b=budget(t),ti=time(t),co=concern(t),lv=score(t,b,ti,p);let sug=lv.name=="高意向"?`优先分配资深销售，先确认${p}诉求、预算和可到院时间，发送案例/医生/安全保障信息，引导预约面诊。`:lv.name=="中意向"?"先补充项目科普、恢复期和案例信息，询问预算与时间，持续跟进并打消核心顾虑。":"先做基础科普和需求确认，不急于强转化，进入长期培育池。";let tags=[p,c,b,ti,co,lv.name].filter(x=>x&&x!="未明确").join(" / ")||"待补充";current={p,c,b,ti,co,lv,sug,tags};document.getElementById("project").innerText=p;document.getElementById("city").innerText=c;document.getElementById("budget").innerText=b;document.getElementById("time").innerText=ti;document.getElementById("concern").innerText=co;document.getElementById("level").innerHTML=`<span class="badge ${lv.cls}">${lv.name} · ${lv.score}分</span>`;document.getElementById("suggestion").innerText=sug;document.getElementById("tags").innerText=tags}
-function addToTable(){if(!current){alert("请先分析线索");return}let tr=document.createElement("tr");tr.innerHTML=`<td>${new Date().toLocaleString()}</td><td>${source.value||"-"}</td><td>${current.p}</td><td>${current.c}</td><td>${current.b}</td><td>${current.lv.name}</td><td>${sales.value||"待分配"}</td><td>${current.sug}</td>`;document.querySelector("#leadTable tbody").prepend(tr)}
+const STORAGE_KEY="medical_aesthetic_leads_v1_2";
+function getSavedLeads(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")}catch(e){return[]}}
+function saveLeads(leads){localStorage.setItem(STORAGE_KEY,JSON.stringify(leads))}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]))}
+const STATUS_OPTIONS=["待跟进","已联系","已预约","已成交","暂不考虑"];
+function renderLeads(){let leads=getSavedLeads(),tbody=document.querySelector("#leadTable tbody");tbody.innerHTML="";leads.forEach((lead,index)=>{let tr=document.createElement("tr");let status=lead.status||"待跟进";let options=STATUS_OPTIONS.map(x=>`<option value="${x}" ${x===status?"selected":""}>${x}</option>`).join("");tr.innerHTML=`<td>${escapeHtml(lead.createdAt)}</td><td>${escapeHtml(lead.source)}</td><td>${escapeHtml(lead.project)}</td><td>${escapeHtml(lead.city)}</td><td>${escapeHtml(lead.budget)}</td><td>${escapeHtml(lead.level)}</td><td>${escapeHtml(lead.sales)}</td><td><select class="status-select" onchange="updateLeadField(${index},'status',this.value)">${options}</select></td><td><input class="note-input" value="${escapeHtml(lead.note||'')}" placeholder="记录顾虑或下次跟进" onchange="updateLeadField(${index},'note',this.value)"></td><td>${escapeHtml(lead.suggestion)}</td><td><button class="secondary" style="margin:0;padding:7px 10px" onclick="deleteLead(${index})">删除</button></td>`;tbody.appendChild(tr)})}
+function updateLeadField(index,field,value){let leads=getSavedLeads();if(!leads[index])return;leads[index][field]=value;saveLeads(leads)}
+function addToTable(){if(!current){alert("请先分析线索");return}let leads=getSavedLeads();leads.unshift({createdAt:new Date().toLocaleString(),source:source.value||"-",project:current.p,city:current.c,budget:current.b,level:current.lv.name,sales:sales.value||"待分配",status:"待跟进",note:"",suggestion:current.sug});saveLeads(leads);renderLeads();alert("已加入线索表并保存")}
+function deleteLead(index){if(!confirm("确定删除这条线索吗？"))return;let leads=getSavedLeads();leads.splice(index,1);saveLeads(leads);renderLeads()}
+function clearSavedLeads(){if(!getSavedLeads().length){alert("当前没有已保存的线索");return}if(!confirm("确定清空全部已保存线索吗？"))return;localStorage.removeItem(STORAGE_KEY);renderLeads()}
 function copyResult(){if(!current){alert("请先分析线索");return}navigator.clipboard.writeText(`项目：${current.p}\n城市：${current.c}\n预算：${current.b}\n时间：${current.ti}\n顾虑：${current.co}\n意向：${current.lv.name}\n标签：${current.tags}\n跟进建议：${current.sug}`).then(()=>alert("已复制"))}
-function exportCSV(){let rows=[["时间","来源","项目","城市","预算","意向","负责人","跟进建议"]];document.querySelectorAll("#leadTable tbody tr").forEach(tr=>rows.push([...tr.children].map(td=>td.innerText.replace(/\n/g," "))));let csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="医美线索分层表.csv";a.click()}
+function exportCSV(){let leads=getSavedLeads();if(!leads.length){alert("当前没有可导出的线索");return}let rows=[["时间","来源","项目","城市","预算","意向","负责人","跟进状态","备注","跟进建议"],...leads.map(x=>[x.createdAt,x.source,x.project,x.city,x.budget,x.level,x.sales,x.status||"待跟进",x.note||"",x.suggestion])];let csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");let a=document.createElement("a");let url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.href=url;a.download="医美线索分层表.csv";a.click();URL.revokeObjectURL(url)}
 function loadSample(){inputText.value="你好，我在重庆，想了解拉皮，预算大概5万左右，最近一个月可以安排。主要担心恢复期、安全问题，还有想看看真实案例。";source.value="抖音投流";sales.value="待分配"}
 function clearAll(){inputText.value="";current=null;["project","city","budget","time","concern","level","suggestion","tags"].forEach(id=>document.getElementById(id).innerText="-")}
 loadSample();
+renderLeads();
 </script></body></html>
